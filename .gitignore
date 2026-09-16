@@ -1,0 +1,25 @@
+# Secrets never belong in the repository
+.env
+.env.*
+!.env.example
+
+# Local Supabase state
+supabase/.branches
+supabase/.temp
+.supabase/
+
+# Deno / node
+node_modules/
+deno.lock
+
+# Editors and OS
+.DS_Store
+.vscode/
+.idea/
+*.swp
+
+# Client data must never be committed, even by accident
+*.csv
+*.xlsx
+*.xls
+exports/
