@@ -77,7 +77,17 @@ Write it down.
 
 ## Step 5 — Put the secrets into Supabase
 
-In Supabase, go to **Project Settings → Edge Functions → Secrets** and add these.
+This page has moved around over the years. As of now it is **not** under
+Project Settings.
+
+**Easiest:** open this link, which picks your project automatically:
+
+> https://supabase.com/dashboard/project/_/functions/secrets
+
+**Or navigate:** **Edge Functions** in the left sidebar — the `ƒ` icon, near the
+bottom — then the **Secrets** tab.
+
+Add each of these with **Add new secret**:
 
 | Name | Value |
 |---|---|
@@ -88,6 +98,25 @@ In Supabase, go to **Project Settings → Edge Functions → Secrets** and add t
 
 `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are provided automatically —
 you do not add those.
+
+> **If you cannot find the page at all**, skip the dashboard and use the
+> terminal instead. This works regardless of what Supabase have renamed
+> things to, and you will need the terminal for Step 6 anyway:
+>
+> ```bash
+> supabase secrets set TELEGRAM_BOT_TOKEN=paste-your-token-here
+> supabase secrets set TELEGRAM_ALLOWED_CHAT_IDS=123456789
+> supabase secrets set TELEGRAM_WEBHOOK_SECRET=your-random-string
+> supabase secrets set CRON_SECRET=your-other-random-string
+>
+> # Check they all landed
+> supabase secrets list
+> ```
+>
+> Run `supabase login` and `supabase link` from Step 6 first.
+
+Secrets take effect immediately. You do not need to redeploy after adding or
+changing one.
 
 > **Why two made-up secrets?** They prove that a request really came from
 > Telegram, and really came from your scheduler. Without them, anyone who
@@ -175,13 +204,15 @@ To switch that on:
    Claude subscription, and is billed separately.
 2. Add US$5 of credit.
 3. Create an API key.
-4. Add it in Supabase as a secret named `ANTHROPIC_API_KEY`.
-5. Redeploy: `supabase functions deploy telegram --no-verify-jwt`
+4. Add it as a secret named `ANTHROPIC_API_KEY`, the same way as Step 5.
 
-Message the bot `/status` — it should now say the manager is awake.
+That is all — no redeploy needed. Message the bot `/status` and it should now
+say the manager is awake. (If it still says asleep, give it a minute for the
+running instance to cycle, then try again.)
 
-**To turn it off again**, delete the secret and redeploy. You are back to free,
-and nothing is lost.
+**To turn it off again**, delete the secret. You are back to free, and nothing
+is lost — your clients, policies and notes are all still there, and every
+scheduled alert carries on as normal.
 
 ### Controlling the spend
 
@@ -230,7 +261,8 @@ curl "https://api.telegram.org/botYOUR-BOT-TOKEN/getWebhookInfo"
 `last_error_message` usually says exactly what is wrong.
 
 **It replies to `/id` but nothing else.**
-Your chat ID is not in `TELEGRAM_ALLOWED_CHAT_IDS`. Add it, then redeploy.
+Your chat ID is not in `TELEGRAM_ALLOWED_CHAT_IDS`. Add it — no redeploy
+needed — and message the bot again.
 
 **No morning briefing arrived.**
 First, it may have had nothing to say — that is deliberate, it stays quiet
