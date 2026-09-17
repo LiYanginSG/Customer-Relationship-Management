@@ -9,6 +9,7 @@ import { NoteForm } from "@/components/NoteForm";
 import { FamilyForm } from "@/components/FamilyForm";
 import { ActionForm } from "@/components/ActionForm";
 import { Disclosure } from "@/components/Disclosure";
+import { ExtraFields } from "@/components/ExtraFields";
 import { PolicyCard } from "@/components/PolicyCard";
 import { completeAction, deleteFamilyMember } from "@/lib/actions";
 import {
@@ -328,6 +329,12 @@ export default async function ClientPage({
               </Disclosure>
             </div>
           </section>
+
+          <ExtraFields
+            title="From your export"
+            extra={client.extra}
+            note="Columns your portal export contained that have no field of their own yet. Nothing is lost \u2014 tell Claude what these are and they can be given proper columns."
+          />
         </div>
       </div>
     </Shell>

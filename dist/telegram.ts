@@ -2615,6 +2615,13 @@ interface StagedRow {
   client_fields: Record<string, unknown>;
   policy_fields: Record<string, unknown>;
   has_policy: boolean;
+  /**
+   * Columns from the export that had no matching field. Kept rather than
+   * dropped: the schema is a considered guess at what your principal's export
+   * contains, and silently discarding a column you rely on is the worst way to
+   * be wrong about that.
+   */
+  extra: Record<string, unknown>;
 }
 
 function parseSheet(bytes: Uint8Array): {
@@ -2652,6 +2659,15 @@ function parseSheet(bytes: Uint8Array): {
     const name = String(mapped.full_name ?? "").trim();
     if (!name) continue;   // a row with no name is not a client
 
+    // Anything we did not recognise, kept verbatim under its original header.
+    const extra: Record<string, unknown> = {};
+    for (const header of unmapped) {
+      const value = record[header];
+      if (value !== null && value !== undefined && value !== "") {
+        extra[header] = typeof value === "string" ? scrubNric(value) : value;
+      }
+    }
+
     const client_fields: Record<string, unknown> = {
       full_name: scrubNric(name),
       dob: parseDate(mapped.dob),
@@ -2684,7 +2700,10 @@ function parseSheet(bytes: Uint8Array): {
       }
       : {};
 
-    rows.push({ full_name: client_fields.full_name as string, client_fields, policy_fields, has_policy });
+    rows.push({
+      full_name: client_fields.full_name as string,
+      client_fields, policy_fields, has_policy, extra,
+    });
   }
 
   return { rows, mapping, unmapped, headers };
@@ -2726,7 +2745,11 @@ async function stageSpreadsheet(
     .join("\n");
 
   const ignored = unmapped.length > 0
-    ? `\n\n<b>Columns I ignored</b>\n${unmapped.map((u) => `  ${esc(u)}`).join("\n")}`
+    ? `\n\n<b>Columns I did not recognise</b>\n` +
+      unmapped.map((u) => `  ${esc(u)}`).join("\n") +
+      `\n\n<i>These are kept anyway, stored against each record and visible in ` +
+      `the portal. Nothing is lost. Send me this list and they can be given ` +
+      `proper columns.</i>`
     : "";
 
   await sendMessage(
@@ -2776,9 +2799,13 @@ export async function applyImport(chatId: number, batchPrefix: string): Promise<
         .limit(1)
         .maybeSingle();
 
-      const fields = Object.fromEntries(
+      const fields: Record<string, unknown> = Object.fromEntries(
         Object.entries(row.client_fields).filter(([, v]) => v != null && v !== ""),
       );
+
+      // Leftovers belong with whichever record the row is really about.
+      const hasExtra = Object.keys(row.extra ?? {}).length > 0;
+      if (hasExtra && !row.has_policy) fields.extra = row.extra;
 
       let clientId: string;
       if (existing) {
@@ -2788,9 +2815,14 @@ export async function applyImport(chatId: number, batchPrefix: string): Promise<
         const { data: current } = await db()
           .from("clients").select("*").eq("id", clientId).single();
 
-        const toFill = Object.fromEntries(
-          Object.entries(fields).filter(([k]) => current?.[k] == null),
+        const toFill: Record<string, unknown> = Object.fromEntries(
+          Object.entries(fields).filter(([k]) => k !== "extra" && current?.[k] == null),
         );
+        // Merge extras rather than replace, so a narrower export next month
+        // does not erase what a wider one captured.
+        if (fields.extra) {
+          toFill.extra = { ...(current?.extra ?? {}), ...(fields.extra as object) };
+        }
         if (Object.keys(toFill).length > 0) {
           await db().from("clients").update(toFill).eq("id", clientId);
         }
@@ -2806,6 +2838,7 @@ export async function applyImport(chatId: number, batchPrefix: string): Promise<
       // --- policy ---
       if (row.has_policy) {
         const pf: Record<string, unknown> = { ...row.policy_fields, client_id: clientId };
+        if (Object.keys(row.extra ?? {}).length > 0) pf.extra = row.extra;
         const policyNumber = pf.policy_number as string | null;
 
         if (policyNumber) {

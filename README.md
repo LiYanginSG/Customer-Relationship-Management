@@ -115,9 +115,13 @@ ranking; it does not invent it.
 that changes your records sits with the manager. A confused lookup agent cannot
 alter your client book.
 
-**Imports are staged.** A spreadsheet is parsed, summarised, and shown to you.
-Nothing is saved until you reply `/apply`. Updates fill blanks rather than
-overwrite — a portal export will not clobber a phone number you fixed by hand.
+**Imports are staged, and nothing is discarded.** A spreadsheet is parsed,
+summarised, and shown to you; nothing is saved until you reply `/apply`.
+Updates fill blanks rather than overwrite — a portal export will not clobber a
+phone number you fixed by hand. Columns the importer does not recognise are
+kept verbatim in an `extra` field and shown in the portal, so the schema being
+an imperfect guess at your principal's export never costs you data. See
+[docs/ADAPTING.md](docs/ADAPTING.md).
 
 **It stays quiet when there is nothing to say.** No "nothing today" message
 every morning. A bot you mute is useless on the day something matters.
