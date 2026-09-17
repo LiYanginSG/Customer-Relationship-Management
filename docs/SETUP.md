@@ -10,6 +10,37 @@ Nothing here costs money unless you choose to switch the AI on in Step 8.
 
 ---
 
+## The five values you will be asked for
+
+Every step below asks you to replace something in CAPITALS. There are only
+five, and this table is the one place to look them up. Keep it open.
+
+| Placeholder | Where it comes from | Looks like |
+|---|---|---|
+| `YOUR-PROJECT-REF` | Supabase gives it to you. It is in your dashboard's address bar: `supabase.com/dashboard/project/`**`abcdefghijklmnop`** | `abcdefghijklmnop` |
+| `YOUR-BOT-TOKEN` | **BotFather gives it to you** in Step 3 | `8123456789:AAHf7x-KpQ2mZnR4tVw8y...` |
+| Your chat ID | **@userinfobot gives it to you** in Step 4 | `123456789` |
+| `YOUR-TELEGRAM-WEBHOOK-SECRET` | **You make this one up.** Any 20+ random characters | `kj38fhskd93jfks02ldk` |
+| `YOUR-CRON-SECRET` | **You make this one up too.** A *different* 20+ random characters | `p29xmv02kdl39sjfa1of` |
+
+**The thing that confuses everyone:** the last two are not given to you by
+anybody. You invent them, once, and then type the *same* value everywhere that
+placeholder appears. They are passwords you are setting, not passwords you are
+being told.
+
+If you lose one:
+
+- **Bot token** — Telegram, message **@BotFather** → `/mybots` → pick your bot
+  → **API Token**.
+- **Webhook or cron secret** — reveal it on the Supabase secrets page, or just
+  invent a new one and change it in *both* places it appears. Nothing breaks.
+
+> **Treat the bot token like a password.** Anyone holding it can control your
+> bot and read whatever it can read. Do not paste it into a chat, an email, or
+> a screenshot.
+
+---
+
 ## Step 1 — Create the Supabase project
 
 1. Go to **supabase.com** and sign up.
@@ -93,8 +124,8 @@ Add each of these with **Add new secret**:
 |---|---|
 | `TELEGRAM_BOT_TOKEN` | The token from Step 3 |
 | `TELEGRAM_ALLOWED_CHAT_IDS` | Your chat ID from Step 4 |
-| `TELEGRAM_WEBHOOK_SECRET` | Make one up. 20+ random characters. |
-| `CRON_SECRET` | Make up a different one. 20+ random characters. |
+| `TELEGRAM_WEBHOOK_SECRET` | **You invent this.** 20+ random characters, e.g. `kj38fhskd93jfks02ldk`. Write it down — Step 7 needs the identical value. |
+| `CRON_SECRET` | **You invent this too**, and make it different. Step 7 needs it again. |
 
 `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are provided automatically —
 you do not add those.
@@ -221,12 +252,29 @@ reads it.
 
 **Connect the bot.** This tells Telegram where to send your messages.
 
-*No terminal?* Paste this straight into your browser's address bar, with your
-own values swapped in, and press Enter:
+You are swapping in three things (see the table at the top of this guide):
+
+- `YOUR-BOT-TOKEN` — from BotFather, Step 3
+- `YOUR-PROJECT-REF` — from your Supabase address bar
+- `YOUR-TELEGRAM-WEBHOOK-SECRET` — **the one you made up** in Step 5. It must
+  match what you saved as `TELEGRAM_WEBHOOK_SECRET`, exactly. Telegram sends
+  this back with every message so your bot can tell a real message from a fake
+  one.
+
+*No terminal?* Paste this into your browser's address bar as a single line,
+with no spaces, and press Enter:
 
 > `https://api.telegram.org/botYOUR-BOT-TOKEN/setWebhook?url=https://YOUR-PROJECT-REF.supabase.co/functions/v1/telegram&secret_token=YOUR-TELEGRAM-WEBHOOK-SECRET`
 
+Filled in, it looks like this:
+
+> `https://api.telegram.org/bot8123456789:AAHf7x-KpQ2mZnR4tVw8yB1cD3eF5gH7jK9/setWebhook?url=https://abcdefghijklmnop.supabase.co/functions/v1/telegram&secret_token=kj38fhskd93jfks02ldk`
+
 You should see `{"ok":true,...}`. Skip to **Test it** below.
+
+> **If you see `{"ok":false,...}`**, read the `description` field. *Unauthorized*
+> means the bot token is wrong. *Bad webhook* means the URL is wrong — usually
+> a typo in the project ref, or a stray space from copying.
 
 *Or from a terminal*, replacing the three capitalised parts:
 
