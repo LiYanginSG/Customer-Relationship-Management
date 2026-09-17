@@ -18,10 +18,24 @@ export function LoginForm({ next }: { next: string }) {
     setState("sending");
     setError(null);
 
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    );
+    // These two must keep their NEXT_PUBLIC_ prefix. That prefix is how Next.js
+    // decides what the browser may see -- without it these are undefined here,
+    // and the failure is otherwise a baffling network error. Say so plainly.
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (!url || !anonKey) {
+      setError(
+        "This portal is not configured. NEXT_PUBLIC_SUPABASE_URL and " +
+          "NEXT_PUBLIC_SUPABASE_ANON_KEY must both be set in Vercel, and both " +
+          "must keep the NEXT_PUBLIC_ prefix -- without it the browser cannot " +
+          "see them. Redeploy after adding them.",
+      );
+      setState("error");
+      return;
+    }
+
+    const supabase = createBrowserClient(url, anonKey);
 
     const redirectTo =
       `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;

@@ -47,12 +47,37 @@ The password does not matter — you will sign in with an emailed link.
    directory is wrong.
 5. Expand **Environment Variables** and add these four:
 
-| Name | Value | Where to find it |
-|---|---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | `https://xxxx.supabase.co` | Supabase → Project Settings → API |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | a long `eyJ...` string | Same page, the **anon** / **publishable** key |
-| `SUPABASE_SERVICE_ROLE_KEY` | another long string | Same page, the **service_role** key — reveal it first |
-| `ADMIN_ALLOWED_EMAILS` | `you@example.com` | Your own email, the one from Step A |
+| Name | Value | Where to find it | Type |
+|---|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | `https://xxxx.supabase.co` | Supabase → Project Settings → API | Config |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | a long `eyJ...` string | Same page, the **anon** / **publishable** key | Config |
+| `SUPABASE_SERVICE_ROLE_KEY` | another long string | Same page, the **service_role** key — reveal it first | **Secret** |
+| `ADMIN_ALLOWED_EMAILS` | `you@example.com` | Your own email, the one from Step A | Config |
+
+> ### Vercel will warn you about the two `NEXT_PUBLIC_` ones
+>
+> *"Remove the public framework prefix to keep this value private."*
+>
+> **Keep the prefix on both, and set them to Config.** The warning is Vercel
+> checking you meant it. You did.
+>
+> That prefix is not Vercel's idea — it is how Next.js decides what the browser
+> is allowed to see. **Remove it and the sign-in page stops working**, because
+> the login form runs in the browser and would find nothing there.
+>
+> Both are safe to expose:
+>
+> - The **URL** is just your project's address. Every network request the
+>   browser makes reveals it anyway.
+> - The **anon key** is designed to be public — Supabase calls it the
+>   *publishable* key. It is safe here because migration `0006_security.sql`
+>   enables row-level security on every table with no policies at all, and
+>   revokes the `anon` role's grants. That key can read nothing: no clients, no
+>   policies, no notes. It is a doorbell, not a key.
+>
+> The one that genuinely must never carry the prefix is
+> `SUPABASE_SERVICE_ROLE_KEY`. Mark it **Secret**, which makes it write-only —
+> even you cannot read it back afterwards, which is the point.
 
 6. **Deploy.** Two minutes or so.
 
@@ -178,3 +203,8 @@ redeploy after an environment variable change: **Deployments** → latest → **
 Go back to Step A. The portal never creates accounts.
 
 **Build failed on Vercel** — almost always Root Directory not set to `admin`.
+
+**"This portal is not configured" on the login page** — one of the two
+`NEXT_PUBLIC_` variables is missing, or its prefix was removed. Next.js only
+exposes variables with that exact prefix to the browser. Restore it, then
+redeploy — environment variable changes do not apply to an existing deployment.
