@@ -126,37 +126,109 @@ changing one.
 
 ## Step 6 — Deploy the functions
 
-This is the only step that needs a terminal.
+Two routes. **Route A needs no terminal at all** — pick that one if Step 6 was
+where you stopped.
 
-On a Mac, open **Terminal**. On Windows, open **PowerShell**.
+---
+
+### Route A — from your browser (no terminal, works on any computer)
+
+The repository contains two ready-made single files, already assembled for
+exactly this. You copy and paste them.
+
+1. In Supabase, click **Edge Functions** in the left sidebar.
+2. Click **Deploy a new function** → **Via Editor**.
+3. Name it exactly **`telegram`**. The name matters — it becomes part of the
+   web address Telegram will call.
+4. Delete whatever sample code is in the editor.
+5. Open **`dist/telegram.ts`** from this repository, select all, copy, and paste
+   it into the editor.
+6. Click **Deploy function**. It takes 10–30 seconds.
+
+Now repeat for the second one:
+
+7. **Deploy a new function** → **Via Editor**, name it exactly **`briefing`**.
+8. Paste in **`dist/briefing.ts`**. Deploy.
+
+**Then turn off JWT verification for both.** This matters and is easy to miss.
+By default Supabase rejects any request that does not carry a logged-in user's
+token. Telegram cannot send one — it is an outside service, not a user. Leave
+this on and your bot will simply never respond.
+
+Open each function → **Settings** → look for **Verify JWT** (sometimes
+*Enforce JWT verification*) and switch it **off**. Do it for both.
+
+> **Two things to know about Route A.** The dashboard editor keeps no version
+> history, so treat the pasted code as disposable — the real source lives in
+> this repository. And if you ever change the code, re-run the bundler
+> (`python3 scripts/bundle.py`) and paste the fresh file.
+
+---
+
+### Route B — from a terminal
+
+Use this if you are comfortable with a command line, or want proper version
+control over deployments.
+
+**Do not use `npm install -g supabase`.** Supabase does not support installing
+their CLI that way and it will fail.
+
+**On Windows**, open **PowerShell** and use [Scoop](https://scoop.sh):
+
+```powershell
+# Install Scoop itself, if you do not have it
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression
+
+# Then the Supabase CLI
+scoop bucket add supabase https://github.com/supabase/scoop-bucket.git
+scoop install supabase
+```
+
+**On a Mac**, open **Terminal**:
 
 ```bash
-# Install the Supabase tool (one time)
-npm install -g supabase
+brew install supabase/tap/supabase
+```
 
-# Sign in — this opens your browser
-supabase login
+**On either**, if you already have Node and would rather not install anything:
 
-# Connect to your project.
+```bash
+npx supabase --version
+```
+...then prefix every command below with `npx`.
+
+Once installed:
+
+```bash
+supabase login          # opens your browser
+
 # Your project ref is in the Supabase address bar:
 # supabase.com/dashboard/project/THIS-BIT-HERE
 supabase link --project-ref YOUR-PROJECT-REF
 
-# Deploy
-supabase functions deploy telegram --no-verify-jwt
-supabase functions deploy briefing --no-verify-jwt
+supabase functions deploy telegram
+supabase functions deploy briefing
 ```
 
-> `--no-verify-jwt` is required. Telegram and the scheduler are not logged-in
-> users, so they cannot present a login token. They authenticate with the two
-> secrets you created in Step 5 instead.
+You do **not** need `--no-verify-jwt` — `supabase/config.toml` in this
+repository already sets `verify_jwt = false` for both functions, and the CLI
+reads it.
 
 ---
 
 ## Step 7 — Connect Telegram, and switch the alarm clock on
 
-**Connect the bot.** Paste this into your terminal, replacing the three
-capitalised parts:
+**Connect the bot.** This tells Telegram where to send your messages.
+
+*No terminal?* Paste this straight into your browser's address bar, with your
+own values swapped in, and press Enter:
+
+> `https://api.telegram.org/botYOUR-BOT-TOKEN/setWebhook?url=https://YOUR-PROJECT-REF.supabase.co/functions/v1/telegram&secret_token=YOUR-TELEGRAM-WEBHOOK-SECRET`
+
+You should see `{"ok":true,...}`. Skip to **Test it** below.
+
+*Or from a terminal*, replacing the three capitalised parts:
 
 ```bash
 curl -X POST "https://api.telegram.org/botYOUR-BOT-TOKEN/setWebhook" \
@@ -254,11 +326,15 @@ Download the text version from the insurer's site instead.
 ## Troubleshooting
 
 **The bot does not reply at all.**
-Check the webhook:
-```bash
-curl "https://api.telegram.org/botYOUR-BOT-TOKEN/getWebhookInfo"
-```
-`last_error_message` usually says exactly what is wrong.
+Open this in your browser, with your token pasted in:
+
+> `https://api.telegram.org/botYOUR-BOT-TOKEN/getWebhookInfo`
+
+Read `last_error_message`. It usually says exactly what is wrong.
+
+If it mentions **401** or **Unauthorized**, JWT verification is still on.
+Go to **Edge Functions → telegram → Settings** and switch **Verify JWT** off.
+This is the single most common reason a freshly deployed bot stays silent.
 
 **It replies to `/id` but nothing else.**
 Your chat ID is not in `TELEGRAM_ALLOWED_CHAT_IDS`. Add it — no redeploy

@@ -1,0 +1,26 @@
+# Supabase project configuration.
+#
+# `supabase link` fills in project_id for you, so leave it as-is until then.
+
+# project_id = "your-project-ref"
+
+# ---------------------------------------------------------------------------
+# Both functions must have JWT verification OFF.
+#
+# By default Supabase rejects any request without a valid user token, before
+# your code runs. Neither caller here can provide one:
+#
+#   - Telegram calls the webhook as an external service. It can send a secret
+#     token header, which we check, but it cannot send a Supabase JWT.
+#   - pg_cron calls the briefing on a schedule. There is no logged-in user.
+#
+# This is Supabase's documented pattern for signed webhooks: the platform check
+# is off, and the function authenticates the caller itself. Both functions here
+# verify a shared secret as their first action and return 403 otherwise.
+# ---------------------------------------------------------------------------
+
+[functions.telegram]
+verify_jwt = false
+
+[functions.briefing]
+verify_jwt = false

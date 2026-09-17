@@ -22,7 +22,8 @@ You never pick a desk. You say "brief me on Sarah before my 2pm" and the
 manager works out that it needs the relationship desk and the policy desk, asks
 both, and answers you in one voice.
 
-**New here? Go to [docs/SETUP.md](docs/SETUP.md).**
+**New here? Go to [docs/SETUP.md](docs/SETUP.md).** It can be set up entirely
+from a browser — no terminal, no Mac, nothing to install.
 
 ---
 
@@ -152,8 +153,27 @@ supabase/
       db.ts, dates.ts
     telegram/           the webhook
     briefing/           the scheduled push
+dist/                   generated single-file builds, for pasting into the
+                        Supabase dashboard editor -- do not edit by hand
+scripts/bundle.py       regenerates dist/ after any source change
 tests/                  deno test --allow-env --allow-read tests/
 ```
+
+### Deploying without a terminal
+
+`dist/telegram.ts` and `dist/briefing.ts` are the whole of each function
+flattened into one file, with `npm:` and `jsr:` imports left intact. Paste
+either into Supabase's browser-based function editor and deploy. Regenerate
+them after changing anything under `supabase/functions/`:
+
+```bash
+python3 scripts/bundle.py
+deno check dist/telegram.ts dist/briefing.ts   # always verify the output
+```
+
+(`deno bundle` would also work, but it inlines the npm packages and produces a
+4.8MB file no browser editor will take. The script only flattens local modules,
+giving ~115KB.)
 
 ## Commands
 
@@ -175,7 +195,16 @@ tests/                  deno test --allow-env --allow-read tests/
 deno check supabase/functions/telegram/index.ts supabase/functions/briefing/index.ts
 deno test --allow-env --allow-read tests/
 deno lint supabase/functions/
+
+python3 scripts/bundle.py                      # refresh dist/
+deno check dist/telegram.ts dist/briefing.ts   # and check what it produced
 ```
+
+Both functions run with `verify_jwt = false` (set in `supabase/config.toml`).
+That is deliberate and is Supabase's documented pattern for signed webhooks:
+neither Telegram nor `pg_cron` can present a user JWT, so each function
+authenticates its caller itself against a shared secret and returns 403
+otherwise.
 
 ## Scope
 

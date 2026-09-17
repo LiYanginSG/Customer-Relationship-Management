@@ -9,15 +9,17 @@
 import { createClient, type SupabaseClient } from "jsr:@supabase/supabase-js@2";
 import { config } from "./config.ts";
 
-let client: SupabaseClient | null = null;
+// Named distinctly from claude.ts's client so the two survive being
+// flattened into one file for dashboard deployment.
+let cachedDb: SupabaseClient | null = null;
 
 export function db(): SupabaseClient {
-  if (!client) {
-    client = createClient(config.supabaseUrl, config.serviceRoleKey, {
+  if (!cachedDb) {
+    cachedDb = createClient(config.supabaseUrl, config.serviceRoleKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
   }
-  return client;
+  return cachedDb;
 }
 
 /**

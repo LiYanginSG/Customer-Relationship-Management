@@ -118,7 +118,7 @@ async function recordUsage(
 
 let anthropic: Anthropic | null = null;
 
-function client(): Anthropic {
+function anthropicClient(): Anthropic {
   if (!aiEnabled()) {
     throw new Error(
       "No ANTHROPIC_API_KEY is set, so the manager and staff are not awake. " +
@@ -190,7 +190,7 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
   while (iterations < maxIterations) {
     iterations += 1;
 
-    const response = await client().messages.create({
+    const response = await anthropicClient().messages.create({
       model,
       max_tokens: opts.maxTokens ?? 8000,
       // The system prompt is identical on every call, so caching it turns the
