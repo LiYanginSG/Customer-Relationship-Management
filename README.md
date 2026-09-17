@@ -25,6 +25,10 @@ both, and answers you in one voice.
 **New here? Go to [docs/SETUP.md](docs/SETUP.md).** It can be set up entirely
 from a browser — no terminal, no Mac, nothing to install.
 
+**Want a screen to work in rather than a chat?** There is an admin portal too:
+client list, policy cards, meeting timeline, follow-ups. Free on Vercel, same
+database as the bot. See **[docs/PORTAL.md](docs/PORTAL.md)**.
+
 ---
 
 ## It runs free, and gets smarter if you pay
@@ -157,6 +161,15 @@ dist/                   generated single-file builds, for pasting into the
                         Supabase dashboard editor -- do not edit by hand
 scripts/bundle.py       regenerates dist/ after any source change
 tests/                  deno test --allow-env --allow-read tests/
+
+admin/                  the web portal (Next.js, deploys to Vercel)
+  app/                  Today, Clients, client detail, login, auth callback
+  components/           forms and cards
+  lib/
+    auth.ts             magic-link session + email allowlist
+    db.ts               service-role client, "server-only" so it cannot leak
+    actions.ts          every write, each re-checking auth first
+    format.ts           Singapore dates, money, and the dropdown vocabularies
 ```
 
 ### Deploying without a terminal

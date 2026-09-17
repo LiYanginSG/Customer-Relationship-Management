@@ -347,15 +347,20 @@ To change it, go to **Table Editor → app_settings** and edit
 
 ## Step 9 — Put your clients in
 
-Three ways, use whichever suits:
+Four ways, use whichever suits:
+
+**The admin portal.** A proper web app for browsing and editing your book —
+client list, policy cards, meeting timeline, follow-ups. Free to host on Vercel,
+takes about ten minutes to deploy, and reads the same database as your bot.
+This is the nicest way to work. See **[PORTAL.md](PORTAL.md)**.
 
 **A spreadsheet.** Export from your company portal, then just attach the file
 to a Telegram message. The bot reads it, tells you what it found, and waits for
 you to confirm before saving anything. Re-import monthly — it updates rather
 than duplicates.
 
-**By hand.** Supabase **Table Editor → clients → Insert row**. Fine for a
-handful.
+**By hand in Supabase.** **Table Editor → clients → Insert row**. Works, but
+it is a database grid, not a tool for the job. Fine for fixing one field.
 
 **By talking** (needs Step 8). "Add Sarah Lim, born 28 Dec 1988, PR, married,
 two kids."
