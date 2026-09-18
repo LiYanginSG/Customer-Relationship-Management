@@ -3210,6 +3210,7 @@ on file. Attach a product PDF — with a caption naming it, like
 /spend — what the AI has cost today
 /status — what's switched on
 /library — what product documents are uploaded
+/forget &lt;name&gt; — remove a document
 /product &lt;terms&gt; — search the contracts, free, no AI needed
 /apply &lt;ref&gt; — confirm a staged spreadsheet import
 /id — your Telegram chat ID
@@ -3436,6 +3437,77 @@ async function runCommand(
         `🔍 <b>${esc(query)}</b>\n\n${blocks.join("\n\n")}\n\n` +
         `<i>Quoted from the documents, not summarised. Verify against the contract ` +
         `before repeating to a client.</i>`,
+      );
+      return true;
+    }
+
+    case "/forget": {
+      // Deleting a document is destructive and there is no undo, so this is
+      // two steps: name it, see what matched, then confirm with the reference.
+      const term = args.trim();
+      if (!term) {
+        await sendMessage(
+          chatId,
+          "Which document?\n\n<code>/forget vitalhealth</code>\n\n" +
+          "I'll show you what matches before anything is removed. " +
+          "See everything with /library.",
+        );
+        return true;
+      }
+
+      // A confirmation looks like: /forget confirm 3f9c1a02
+      const confirmMatch = term.match(/^confirm\s+([0-9a-f-]{6,})$/i);
+      if (confirmMatch) {
+        const prefix = confirmMatch[1].toLowerCase();
+        const { data: candidates } = await db()
+          .from("products")
+          .select("id, insurer, name, storage_path");
+
+        const target = (candidates ?? []).find((p) =>
+          String(p.id).toLowerCase().startsWith(prefix)
+        );
+        if (!target) {
+          await sendMessage(chatId, `No document with reference <code>${esc(prefix)}</code>.`);
+          return true;
+        }
+
+        // The stored file has to go too, or it lingers invisibly in the bucket.
+        if (target.storage_path) {
+          const { error } = await db().storage
+            .from("products").remove([String(target.storage_path)]);
+          if (error) console.error("storage remove failed:", error.message);
+        }
+        await db().from("products").delete().eq("id", target.id);
+
+        await sendMessage(
+          chatId,
+          `🗑 Removed <b>${esc(String(target.name))}</b> and everything indexed from it.`,
+        );
+        return true;
+      }
+
+      const { data: matches } = await db()
+        .from("products")
+        .select("id, insurer, name, doc_type, status")
+        .or(`name.ilike.%${term}%,insurer.ilike.%${term}%`)
+        .limit(10);
+
+      if (!matches || matches.length === 0) {
+        await sendMessage(chatId, `Nothing matches <b>${esc(term)}</b>. Try /library.`);
+        return true;
+      }
+
+      const lines = matches.map((m) =>
+        `• <b>${esc(String(m.name))}</b> <i>(${esc(String(m.insurer))})</i>\n` +
+        `   <code>/forget confirm ${String(m.id).slice(0, 8)}</code>`
+      );
+
+      await sendMessage(
+        chatId,
+        `Found ${matches.length}:\n\n${lines.join("\n\n")}\n\n` +
+        `<i>Deleting removes the file and everything indexed from it. There is no undo. ` +
+        `If you only want it out of search results, mark it superseded in the portal instead ` +
+        `— that keeps the document but stops it surfacing as current.</i>`,
       );
       return true;
     }

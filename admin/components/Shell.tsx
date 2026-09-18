@@ -26,6 +26,9 @@ export function Shell({
                 <Link href="/clients" className="text-ink-soft hover:text-ink whitespace-nowrap">
                   Clients
                 </Link>
+                <Link href="/library" className="text-ink-soft hover:text-ink whitespace-nowrap">
+                  Library
+                </Link>
               </nav>
             </div>
 

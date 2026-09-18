@@ -323,3 +323,107 @@ export async function completeAction(data: FormData): Promise<void> {
   if (clientId) revalidatePath(`/clients/${clientId}`);
   revalidatePath("/");
 }
+
+// ---------------------------------------------------------------------------
+// Product library
+// ---------------------------------------------------------------------------
+
+/**
+ * Remove a document entirely.
+ *
+ * Three things have to go, in this order: the searchable chunks, the stored
+ * file, then the record. Deleting only the row would leave the PDF sitting in
+ * storage forever, invisible and still counting against your quota -- the kind
+ * of leak nobody notices until the bill or the bucket fills up.
+ */
+export async function deleteProduct(data: FormData): Promise<void> {
+  await requireUser();
+
+  const id = text(data, "product_id");
+  if (!id) return;
+
+  const { data: product } = await db()
+    .from("products")
+    .select("storage_path")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (product?.storage_path) {
+    const { error } = await db().storage.from("products").remove([product.storage_path]);
+    // A missing file should not block the delete -- the record going is what
+    // matters, and an orphaned file is better than an orphaned record.
+    if (error) console.error("could not remove stored file:", error.message);
+  }
+
+  // product_chunks cascade with the product, per the schema.
+  await db().from("products").delete().eq("id", id);
+
+  revalidatePath("/library");
+}
+
+/**
+ * Mark a document current, superseded or withdrawn.
+ *
+ * Search only covers `current`, so this is how an old version stops surfacing
+ * as though it still applied -- which matters more than deleting it, since you
+ * may still need to know what a client's older policy actually said.
+ */
+export async function setProductStatus(data: FormData): Promise<void> {
+  await requireUser();
+
+  const id = text(data, "product_id");
+  const status = text(data, "status");
+  if (!id || !status) return;
+
+  await db().from("products").update({ status }).eq("id", id);
+  revalidatePath("/library");
+}
+
+/** Fix the insurer and name, which the importer guesses from the caption. */
+export async function updateProduct(
+  _prev: ActionResult | null,
+  data: FormData,
+): Promise<ActionResult> {
+  await requireUser();
+
+  const id = text(data, "product_id");
+  const insurer = text(data, "insurer");
+  const name = text(data, "name");
+
+  if (!id) return { ok: false, error: "Missing document." };
+  if (!insurer) return { ok: false, error: "An insurer is required." };
+  if (!name) return { ok: false, error: "A name is required." };
+
+  const { error } = await db().from("products").update({
+    insurer,
+    name,
+    doc_type: text(data, "doc_type"),
+    effective_date: text(data, "effective_date"),
+  }).eq("id", id);
+
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/library");
+  return { ok: true, message: "Saved." };
+}
+
+/**
+ * A short-lived link to view the original PDF.
+ *
+ * The bucket is private, so there is no permanent URL to hand out. A signed
+ * link expires in five minutes, which is long enough to open and too short to
+ * be worth forwarding.
+ */
+export async function signedDocumentUrl(storagePath: string): Promise<string | null> {
+  await requireUser();
+
+  const { data, error } = await db().storage
+    .from("products")
+    .createSignedUrl(storagePath, 300);
+
+  if (error) {
+    console.error("could not sign document url:", error.message);
+    return null;
+  }
+  return data?.signedUrl ?? null;
+}

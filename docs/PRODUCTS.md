@@ -82,6 +82,47 @@ Product terms differ between insurers and change between versions, so a
 confident guess about an exclusion is exactly the kind of thing that becomes a
 complaint.
 
+## Managing what you have uploaded
+
+### In the portal — **Library**
+
+Documents are grouped by insurer, with contracts listed before summaries
+because that is where the awkward questions get answered. For each one:
+
+- **Open PDF** — a link valid for five minutes. The bucket is private, so
+  there is no permanent URL that could be forwarded.
+- **Edit** — fix the insurer, name, type or effective date. Worth knowing: the
+  insurer is guessed from the first word of your caption, so it is often the
+  thing that needs correcting.
+- **Mark superseded** — keeps the document but removes it from search. Usually
+  the right choice for an old version: you may still need to know what a
+  client's older policy said, but it must not surface as though it were current.
+- **Delete** — removes the record, the indexed text and the stored file. Two
+  clicks, because there is no undo.
+
+The page also warns you about documents with **no searchable text** — almost
+always a scan. The file is stored but cannot be searched, which is worth
+knowing before you rely on it being there.
+
+### In Telegram
+
+```
+/library                        everything uploaded, grouped by insurer
+/forget vitalhealth             show what matches
+/forget confirm 3f9c1a02        actually remove it
+```
+
+Two steps by design. You see what matched before anything goes.
+
+### Superseded, or deleted?
+
+**Superseded** when a product has been revised and you might still need the old
+wording — a client on the 2023 version is governed by the 2023 contract, not
+today's. It stays readable, just out of search.
+
+**Delete** when it was the wrong file, a duplicate, or a scan that was never
+searchable anyway.
+
 ## What to upload, in order of usefulness
 
 1. **Policy contracts.** Longest and least pleasant to read, which is precisely
@@ -106,5 +147,10 @@ if it still applied.
 ## Housekeeping
 
 These are your principal's documents, held privately for your own reference.
-The bucket is not public and nothing generates a shareable link. Keep it that
-way.
+The bucket is not public, and the only links generated expire after five
+minutes. Keep it that way.
+
+Deleting removes the stored file as well as the record. That matters: deleting
+only the row would leave the PDF in the bucket forever, invisible and still
+counting against your storage — the kind of leak nobody notices until the
+bucket fills up.

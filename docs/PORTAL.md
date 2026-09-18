@@ -121,6 +121,11 @@ and who has gone quiet. Everything is clickable.
 someone is past the cadence you set for them, and red if you have never
 recorded contact at all.
 
+**Library** — your product documents, grouped by insurer. Open the original
+PDF, fix an insurer the importer guessed wrong, mark an old version superseded
+so it stops appearing in searches, or delete it outright. Searching here
+returns the actual clause text with its page number.
+
 **A client** — everything in one page:
 
 - Four numbers at the top: policies in force, annualised premium, total death
