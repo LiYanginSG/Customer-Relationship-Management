@@ -11,7 +11,10 @@
  */
 
 import { config, aiEnabled, isAllowedChat } from "../_shared/config.ts";
-import { sendMessage, sendTyping, type TelegramUpdate, type TelegramMessage } from "../_shared/telegram.ts";
+import {
+  sendMessage, sendTyping, esc,
+  type TelegramUpdate, type TelegramMessage,
+} from "../_shared/telegram.ts";
 import { buildBriefingText } from "../_shared/briefing.ts";
 import { handleMessage } from "../_shared/manager.ts";
 import { spendToday } from "../_shared/claude.ts";
@@ -44,7 +47,8 @@ top-up." I'll file the note, add the family member and set the follow-ups.
 
 <b>Sending me files</b>
 Attach your portal export (.csv or .xlsx) and I'll reconcile it against what's
-on file. Attach a product PDF and I'll add it to the library.
+on file. Attach a product PDF — with a caption naming it, like
+<code>AIA Max VitalHealth A</code> — and I'll index it for searching.
 
 <b>Commands</b>
 /brief — today's briefing, on demand
@@ -54,6 +58,8 @@ on file. Attach a product PDF and I'll add it to the library.
 /quiet — who's gone cold
 /spend — what the AI has cost today
 /status — what's switched on
+/library — what product documents are uploaded
+/product &lt;terms&gt; — search the contracts, free, no AI needed
 /apply &lt;ref&gt; — confirm a staged spreadsheet import
 /id — your Telegram chat ID
 `.trim();
@@ -177,6 +183,108 @@ async function runCommand(
         (aiEnabled()
           ? "<i>Talk to me normally.</i>"
           : "<i>Commands work. For conversation, add an ANTHROPIC_API_KEY.</i>"),
+      );
+      return true;
+    }
+
+    case "/library": {
+      const { data, error } = await db()
+        .from("products")
+        .select("insurer, name, doc_type, page_count, status, ingested_at")
+        .eq("status", "current")
+        .order("insurer")
+        .order("name");
+
+      if (error) {
+        await sendMessage(chatId, `Could not read the library: ${esc(error.message)}`);
+        return true;
+      }
+      if (!data || data.length === 0) {
+        await sendMessage(
+          chatId,
+          "The library is empty.\n\nSend me a product PDF with a caption naming it, " +
+          "like <code>AIA Max VitalHealth A</code>, and I'll index it.",
+        );
+        return true;
+      }
+
+      const byInsurer = new Map<string, string[]>();
+      for (const d of data) {
+        const line = `  • ${esc(String(d.name))}` +
+          (d.page_count ? ` <i>(${d.page_count}p)</i>` : "");
+        const key = String(d.insurer);
+        byInsurer.set(key, [...(byInsurer.get(key) ?? []), line]);
+      }
+
+      const blocks = [...byInsurer.entries()]
+        .map(([insurer, lines]) => `<b>${esc(insurer)}</b>\n${lines.join("\n")}`);
+
+      await sendMessage(
+        chatId,
+        `📚 <b>Product library</b> · ${data.length} document(s)\n\n${blocks.join("\n\n")}\n\n` +
+        `<i>Search it with</i> <code>/product deferment period</code>`,
+      );
+      return true;
+    }
+
+    case "/product": {
+      // Deliberately free. This runs the same full-text search the product desk
+      // uses, but returns the passages verbatim instead of having a model
+      // summarise them. No API key, no cost -- and for a question about an
+      // exclusion or a waiting period, the exact wording is what you want
+      // anyway, because that is what you would have to quote to a client.
+      const query = args.trim();
+      if (!query) {
+        await sendMessage(
+          chatId,
+          "What should I look for?\n\n" +
+          "<code>/product deferment period</code>\n" +
+          "<code>/product pre-existing exclusion</code>\n\n" +
+          "<i>Insurance wording is precise, so exact terms work best.</i>",
+        );
+        return true;
+      }
+
+      const { data, error } = await db().rpc("search_products", {
+        query_text: query,
+        insurer_filter: null,
+        max_results: 4,
+      });
+
+      if (error) {
+        await sendMessage(chatId, `Search failed: ${esc(error.message)}`);
+        return true;
+      }
+      if (!data || data.length === 0) {
+        await sendMessage(
+          chatId,
+          `Nothing in the library matches <b>${esc(query)}</b>.\n\n` +
+          `<i>Check what is uploaded with</i> /library`,
+        );
+        return true;
+      }
+
+      const blocks = data.map((r: Record<string, unknown>) => {
+        const body = String(r.content).replace(/\s+/g, " ").trim();
+        // Telegram caps a message, and four long clauses will not fit. Trim
+        // each rather than lose the later results entirely.
+        const excerpt = body.length > 700 ? `${body.slice(0, 700)}…` : body;
+        const where = [
+          r.insurer, r.product_name,
+          r.page_from ? `p${r.page_from}` : null,
+        ].filter(Boolean).join(" · ");
+        const loose = r.match_type === "partial"
+          ? " <i>(loose match — read carefully)</i>"
+          : "";
+        return `<b>${esc(String(r.heading ?? "Extract"))}</b>${loose}\n` +
+               `<i>${esc(where)}</i>\n${esc(excerpt)}`;
+      });
+
+      await sendMessage(
+        chatId,
+        `🔍 <b>${esc(query)}</b>\n\n${blocks.join("\n\n")}\n\n` +
+        `<i>Quoted from the documents, not summarised. Verify against the contract ` +
+        `before repeating to a client.</i>`,
       );
       return true;
     }

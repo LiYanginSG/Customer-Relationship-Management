@@ -29,6 +29,10 @@ from a browser — no terminal, no Mac, nothing to install.
 client list, policy cards, meeting timeline, follow-ups. Free on Vercel, same
 database as the bot. See **[docs/PORTAL.md](docs/PORTAL.md)**.
 
+**Uploading product contracts?** Start there — they hold no client data. See
+**[docs/PRODUCTS.md](docs/PRODUCTS.md)**. Searching them is free; only plain-English
+answers need a key.
+
 ---
 
 ## It runs free, and gets smarter if you pay
