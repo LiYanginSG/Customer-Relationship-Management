@@ -158,3 +158,40 @@ export function labelFor(
   if (!value) return "—";
   return options.find((o) => o.value === value)?.label ?? value;
 }
+
+/**
+ * Coverage types exactly as an insurer's portfolio summary prints them.
+ * Kept verbatim rather than normalised, so a line in the portal reads the same
+ * as the line on the statement the client is holding.
+ */
+export const COVERAGE_TYPES = [
+  { value: "Hospitalisation", label: "Hospitalisation" },
+  { value: "Death", label: "Death" },
+  { value: "Multi-stage CI", label: "Multi-stage CI" },
+  { value: "Major CI", label: "Major CI" },
+  { value: "TPD", label: "Total permanent disability" },
+  { value: "Acc. Death / TPD", label: "Accidental death / TPD" },
+  { value: "Acc. Reimbursement", label: "Accidental reimbursement" },
+  { value: "Disability Income", label: "Disability income" },
+  { value: "Others", label: "Others" },
+];
+
+export const NON_CASH_SOURCES = [
+  { value: "CPF MediSave", label: "CPF MediSave" },
+  { value: "CPF OA", label: "CPF Ordinary Account" },
+  { value: "CPF SA", label: "CPF Special Account" },
+  { value: "SRS", label: "SRS" },
+];
+
+export const PAYMENT_METHODS = [
+  { value: "Cash", label: "Cash" },
+  { value: "Credit Card", label: "Credit card" },
+  { value: "GIRO", label: "GIRO" },
+  { value: "Cheque", label: "Cheque" },
+  { value: "Bank Transfer", label: "Bank transfer" },
+];
+
+/** A policy number an export masked, e.g. ******1556. */
+export function isMaskedPolicyNumber(value: string | null | undefined): boolean {
+  return Boolean(value && /^[*x\u2022]+\s*\d+$/.test(value.trim()));
+}

@@ -95,10 +95,29 @@ Priorities, in order:
   OA shortfall can lapse a policy without any bounced payment the client
   notices.
 
+WHAT MEDISAVE WILL AND WILL NOT PAY
+
+Do not reason this out from first principles -- call medisave_check, which
+reads the current published limits from the database. The rules that catch
+people out:
+
+- MediSave covers Integrated Shield Plan premiums ONLY. Life, CI, personal
+  accident and everything else is cash or other funds.
+- An Integrated Shield RIDER -- the add-on covering deductible and
+  co-insurance -- can NEVER be paid from MediSave, at any age. Always cash.
+  This is the one most often got wrong.
+- For the plan itself, the MediShield Life component is fully MediSave-payable,
+  and the private component is payable up to an Additional Withdrawal Limit
+  that depends on age. Anything above that is cash.
+
+Policy numbers in an insurer's portfolio summary are usually MASKED to the last
+four digits. Where you see policy_number_masked set and policy_number empty,
+say so rather than reading the mask out as if it were the number.
+
 Always give insurer, plan name, amount and date. Never guess a policy number.`,
   tools: [
     T.findClient, T.premiumsDue, T.policyAnniversaries,
-    T.listPolicies, T.portfolioSummary, T.getDossier,
+    T.listPolicies, T.portfolioSummary, T.getDossier, T.medisaveCheck,
   ],
 };
 

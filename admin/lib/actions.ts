@@ -134,14 +134,31 @@ export async function savePolicy(
     plan_name: planName,
     policy_number: text(data, "policy_number"),
     policy_type: text(data, "policy_type"),
+    coverage_type: text(data, "coverage_type"),
+    coverage_descriptor: text(data, "coverage_descriptor"),
     status: text(data, "status") ?? "in_force",
     sum_assured: number(data, "sum_assured"),
-    premium_amount: number(data, "premium_amount"),
+    annual_claim_limit: number(data, "annual_claim_limit"),
+
+    // Two streams, not one. A Shield plan is often part CPF and part cash, and
+    // the database derives premium_amount and paid_from_cpf from these.
+    premium_cash: number(data, "premium_cash"),
+    premium_non_cash: number(data, "premium_non_cash"),
+    non_cash_source: text(data, "non_cash_source"),
+    payment_method: text(data, "payment_method"),
+
     premium_mode: text(data, "premium_mode"),
     inception_date: text(data, "inception_date"),
     maturity_date: text(data, "maturity_date"),
+    coverage_expiry_date: text(data, "coverage_expiry_date"),
     next_premium_due: text(data, "next_premium_due"),
-    paid_from_cpf: bool(data, "paid_from_cpf"),
+    payment_term_years: number(data, "payment_term_years"),
+    payment_until_age: number(data, "payment_until_age"),
+    total_premium_paid: number(data, "total_premium_paid"),
+    surrender_value: number(data, "surrender_value"),
+    net_asset_value: number(data, "net_asset_value"),
+
+    is_rider: bool(data, "is_rider"),
     cpf_account: text(data, "cpf_account"),
     is_integrated_shield: bool(data, "is_integrated_shield"),
     last_reviewed_at: text(data, "last_reviewed_at"),
@@ -164,8 +181,11 @@ export async function savePolicy(
 
 /** The unique constraint on (insurer, policy_number) is the one people hit. */
 function friendlyPolicyError(message: string): string {
-  if (message.includes("policies_insurer_policy_number_key")) {
-    return "A policy with that number already exists for that insurer.";
+  if (message.includes("policies_real_number_idx")) {
+    return "That policy number is already used by another policy with this insurer.";
+  }
+  if (message.includes("policies_identity_idx")) {
+    return "This client already has a policy with that insurer, plan name and start date.";
   }
   return message;
 }

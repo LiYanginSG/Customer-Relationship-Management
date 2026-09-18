@@ -73,11 +73,16 @@ export function PolicyCard({ policy, clientId }: { policy: Policy; clientId: str
           </h3>
           <p className="text-xs text-ink-soft mt-0.5">
             {[
-              labelFor(POLICY_TYPES, policy.policy_type),
+              policy.coverage_type ?? labelFor(POLICY_TYPES, policy.policy_type),
               policy.policy_number,
               lapsed ? labelFor(POLICY_STATUSES, policy.status) : null,
             ].filter(Boolean).join(" · ")}
           </p>
+          {!policy.policy_number && policy.policy_number_masked && (
+            <p className="text-xs text-warn mt-0.5">
+              Number only known as {policy.policy_number_masked} — add the full one
+            </p>
+          )}
         </div>
         <button
           type="button"
@@ -90,8 +95,10 @@ export function PolicyCard({ policy, clientId }: { policy: Policy; clientId: str
 
       <dl className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2 text-xs">
         <div>
-          <dt className="text-ink-faint">Sum assured</dt>
-          <dd className="tabular-nums mt-0.5">{money(policy.sum_assured)}</dd>
+          <dt className="text-ink-faint">Cover</dt>
+          <dd className="tabular-nums mt-0.5">
+            {policy.coverage_descriptor ?? money(policy.sum_assured)}
+          </dd>
         </div>
         <div>
           <dt className="text-ink-faint">Premium</dt>
@@ -102,6 +109,14 @@ export function PolicyCard({ policy, clientId }: { policy: Policy; clientId: str
                 {" "}/ {labelFor(PREMIUM_MODES, policy.premium_mode).toLowerCase()}
               </span>
             )}
+            {/* Where a plan is split, showing only the total hides the thing
+                that actually matters when a MediSave balance runs low. */}
+            {policy.premium_cash != null && policy.premium_non_cash != null && (
+              <span className="block text-ink-faint">
+                {money(policy.premium_cash)} cash + {money(policy.premium_non_cash)}{" "}
+                {policy.non_cash_source ?? "CPF"}
+              </span>
+            )}
           </dd>
         </div>
         <div>
@@ -109,20 +124,30 @@ export function PolicyCard({ policy, clientId }: { policy: Policy; clientId: str
           <dd className="mt-0.5">{formatDate(policy.inception_date)}</dd>
         </div>
         <div>
-          <dt className="text-ink-faint">Next due</dt>
+          <dt className="text-ink-faint">
+            {policy.next_premium_due ? "Next due" : "Expires"}
+          </dt>
           <dd className={`mt-0.5 ${overdue ? "text-alert font-medium" : ""}`}>
-            {formatDate(policy.next_premium_due)}
+            {policy.next_premium_due
+              ? formatDate(policy.next_premium_due)
+              : formatDate(policy.coverage_expiry_date)}
           </dd>
         </div>
       </dl>
 
-      {(overdue || policy.paid_from_cpf || !policy.last_reviewed_at) && (
+      {(overdue || policy.is_rider || (policy.premium_non_cash ?? 0) > 0 ||
+        !policy.last_reviewed_at) && (
         <div className="mt-3 flex flex-wrap gap-1.5">
           {overdue && (
             <span className="chip bg-alert/10 text-alert">Premium overdue</span>
           )}
-          {policy.paid_from_cpf && (
-            <span className="chip bg-surface-sunk text-ink-soft">CPF-funded</span>
+          {policy.is_rider && (
+            <span className="chip bg-surface-sunk text-ink-soft">Rider</span>
+          )}
+          {policy.premium_non_cash != null && policy.premium_non_cash > 0 && (
+            <span className="chip bg-surface-sunk text-ink-soft">
+              {policy.non_cash_source ?? "CPF"}-funded
+            </span>
           )}
           {!policy.last_reviewed_at && policy.status === "in_force" && (
             <span className="chip bg-warn/10 text-warn">Never reviewed</span>

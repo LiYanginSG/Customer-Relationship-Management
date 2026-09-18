@@ -1442,22 +1442,51 @@ export const coverageGaps: AgentTool = {
         );
       }
 
-      // A rough income-multiple check, stated as a fact rather than a verdict.
-      const deathCover = policies
-        .filter((p) => ["term_life", "whole_life"].includes(String(p.policy_type)))
-        .reduce((sum, p) => sum + Number(p.sum_assured ?? 0), 0);
+      // Protection-gap benchmarks from the LIA Singapore Protection Gap Study:
+      // 9x annual income for death and TPD, 4x for critical illness. These are
+      // the figures the insurers' own tools quote, so using anything else puts
+      // this system at odds with the illustration the client is holding.
+      const LIA_DEATH_MULTIPLE = 9;
+      const LIA_CI_MULTIPLE = 4;
+
+      const sumFor = (types: string[]) =>
+        policies
+          .filter((p) => types.includes(String(p.policy_type)))
+          .reduce((sum, p) => sum + Number(p.sum_assured ?? 0), 0);
+
+      const deathCover = sumFor(["term_life", "whole_life"]);
+      const ciCover = sumFor(["ci_standalone"]);
 
       const income = Number(client.annual_income ?? 0);
       let coverMultiple: number | null = null;
-      if (income > 0 && deathCover > 0) {
-        coverMultiple = Number((deathCover / income).toFixed(1));
-        if (coverMultiple < 10 && dependants.length > 0) {
+      let recommendedDeath: number | null = null;
+      let recommendedCi: number | null = null;
+
+      if (income > 0) {
+        recommendedDeath = income * LIA_DEATH_MULTIPLE;
+        recommendedCi = income * LIA_CI_MULTIPLE;
+
+        if (deathCover > 0) coverMultiple = Number((deathCover / income).toFixed(1));
+
+        if (deathCover < recommendedDeath) {
           gaps.push(
-            `Death cover is ${coverMultiple}x annual income with ${dependants.length} ` +
-              "dependant(s). A common planning benchmark is 10x, though the right " +
-              "figure depends on their liabilities and their spouse's income.",
+            `Death cover is ${deathCover.toLocaleString()} against an LIA benchmark of ` +
+              `${recommendedDeath.toLocaleString()} (9x income). Shortfall ` +
+              `${(recommendedDeath - deathCover).toLocaleString()}.`,
           );
         }
+        if (ciCover < recommendedCi) {
+          gaps.push(
+            `Critical illness cover is ${ciCover.toLocaleString()} against an LIA ` +
+              `benchmark of ${recommendedCi.toLocaleString()} (4x income). Shortfall ` +
+              `${(recommendedCi - ciCover).toLocaleString()}.`,
+          );
+        }
+      } else {
+        gaps.push(
+          "No annual income on file, so the protection-gap benchmarks cannot be " +
+            "calculated. Worth adding -- it is what the 9x and 4x figures multiply.",
+        );
       }
 
       const stale = policies.filter((p) => {
@@ -1477,7 +1506,14 @@ export const coverageGaps: AgentTool = {
         policies_in_force: policies.length,
         policy_types_held: [...types],
         total_death_cover: deathCover,
+        total_ci_cover: ciCover,
         cover_multiple_of_income: coverMultiple,
+        lia_benchmark_death: recommendedDeath,
+        lia_benchmark_ci: recommendedCi,
+        benchmark_source:
+          "LIA Singapore Protection Gap Study: 9x annual income for death and TPD, " +
+          "4x for critical illness. The same basis the insurers' own portfolio " +
+          "summaries quote.",
         never_or_long_unreviewed: stale.map((p) => `${p.insurer} ${p.plan_name}`),
         gaps,
         caution:
@@ -1986,6 +2022,41 @@ export const completeAction: AgentTool = {
     }),
 };
 
+export const medisaveCheck: AgentTool = {
+  name: "medisave_check",
+  description:
+    "Whether a policy line can be paid from MediSave, and up to what annual " +
+    "limit. Reads the published CPF limits from the database rather than " +
+    "relying on recall, because these are revised periodically and a stale " +
+    "figure quoted to a client is a real problem. Use this for ANY question " +
+    "about CPF, MediSave or how a Shield premium is funded.",
+  input_schema: {
+    type: "object",
+    properties: {
+      coverage_type: {
+        type: "string",
+        description: "The policy's coverage_type, e.g. 'Hospitalisation', 'Death'.",
+      },
+      is_rider: {
+        type: "boolean",
+        description:
+          "True for an Integrated Shield rider. Riders are never MediSave-payable.",
+      },
+      age_next_birthday: { type: "integer" },
+    },
+    required: ["coverage_type", "is_rider", "age_next_birthday"],
+    additionalProperties: false,
+  },
+  run: (input) =>
+    safe(() =>
+      rpc("medisave_payable", {
+        policy_coverage_type: String(input.coverage_type),
+        policy_is_rider: Boolean(input.is_rider),
+        age_next_birthday: Number(input.age_next_birthday),
+      })
+    ),
+};
+
 // ===== _shared/staff/index.ts ======================================
 /**
  * staff/index.ts -- the desks.
@@ -2083,10 +2154,29 @@ Priorities, in order:
   OA shortfall can lapse a policy without any bounced payment the client
   notices.
 
+WHAT MEDISAVE WILL AND WILL NOT PAY
+
+Do not reason this out from first principles -- call medisave_check, which
+reads the current published limits from the database. The rules that catch
+people out:
+
+- MediSave covers Integrated Shield Plan premiums ONLY. Life, CI, personal
+  accident and everything else is cash or other funds.
+- An Integrated Shield RIDER -- the add-on covering deductible and
+  co-insurance -- can NEVER be paid from MediSave, at any age. Always cash.
+  This is the one most often got wrong.
+- For the plan itself, the MediShield Life component is fully MediSave-payable,
+  and the private component is payable up to an Additional Withdrawal Limit
+  that depends on age. Anything above that is cash.
+
+Policy numbers in an insurer's portfolio summary are usually MASKED to the last
+four digits. Where you see policy_number_masked set and policy_number empty,
+say so rather than reading the mask out as if it were the number.
+
 Always give insurer, plan name, amount and date. Never guess a policy number.`,
   tools: [
     findClient, premiumsDue, policyAnniversaries,
-    listPolicies, portfolioSummary, getDossier,
+    listPolicies, portfolioSummary, getDossier, medisaveCheck,
   ],
 };
 
