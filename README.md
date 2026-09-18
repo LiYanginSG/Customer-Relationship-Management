@@ -31,7 +31,8 @@ database as the bot. See **[docs/PORTAL.md](docs/PORTAL.md)**.
 
 **Uploading product contracts?** Start there — they hold no client data. See
 **[docs/PRODUCTS.md](docs/PRODUCTS.md)**. Searching them is free; only plain-English
-answers need a key.
+answers need a key. Note that nothing works until the migrations are run and the
+bot is deployed — the commands below are typed in Telegram, not anywhere else.
 
 ---
 
@@ -197,6 +198,8 @@ deno check dist/telegram.ts dist/briefing.ts   # always verify the output
 giving ~115KB.)
 
 ## Commands
+
+All of these are typed **to your bot in Telegram**, once it is deployed.
 
 | | |
 |---|---|

@@ -6,6 +6,16 @@ them.
 This is a good place to start, before any client data. Product documents
 contain no personal information, so there is nothing to be careful about.
 
+## Before any of this works
+
+The product library needs two things running: the database migrations applied,
+and the `telegram` function deployed. Until both are done there is no bucket
+for a file to land in and no bot to receive it — a PDF sent to an undeployed
+bot simply goes nowhere, with no error.
+
+See [SETUP.md](SETUP.md) steps 1-2 (migrations) and 5-7 (bot). You can skip the
+cron schedule in step 7 if you only want the product library for now.
+
 ## Where they go
 
 **Supabase Storage, in a private `products` bucket.** Private means no public
@@ -31,6 +41,10 @@ The bot replies with how many pages and sections it indexed.
 ## Asking questions
 
 ### Free, no API key
+
+**Type these to your bot in Telegram** — not in a terminal, and not in a Claude
+chat. They are commands your bot understands, and they only work once the bot
+is deployed and the migrations are run.
 
 ```
 /library                              what is uploaded
