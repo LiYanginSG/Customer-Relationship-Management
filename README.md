@@ -22,8 +22,9 @@ You never pick a desk. You say "brief me on Sarah before my 2pm" and the
 manager works out that it needs the relationship desk and the policy desk, asks
 both, and answers you in one voice.
 
-**New here? Go to [docs/SETUP.md](docs/SETUP.md).** It can be set up entirely
-from a browser — no terminal, no Mac, nothing to install.
+**Setting it up? Go to [docs/GO-LIVE.md](docs/GO-LIVE.md).** One ordered path,
+entirely in a browser — no terminal, no Mac, nothing to install. About 40
+minutes. ([SETUP.md](docs/SETUP.md) is the longer reference version.)
 
 **Want a screen to work in rather than a chat?** There is an admin portal too:
 client list, policy cards, meeting timeline, follow-ups. Free on Vercel, same

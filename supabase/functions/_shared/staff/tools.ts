@@ -436,17 +436,33 @@ export const coverageGaps: AgentTool = {
 
       const gaps: string[] = [];
 
-      if (!types.has("hospital")) {
+      const coversHospital = policies.some((p) =>
+        String(p.policy_type) === "hospital" ||
+        String(p.coverage_type ?? "").toLowerCase().includes("hospitalisation"));
+
+      if (!coversHospital) {
         gaps.push(
           "No hospital or Integrated Shield plan on file. Worth confirming " +
             "whether they hold one elsewhere -- MediShield Life alone leaves a " +
             "large gap for private care.",
         );
       }
-      if (!types.has("ci_standalone") && !policies.some((p) => (p.riders ?? []).length > 0)) {
-        gaps.push("No critical illness cover on file, and no riders recorded.");
+      // Riders are real rows now, not a text array, so CI cover attached as a
+      // rider is visible here rather than hidden inside its parent plan. Check
+      // what each line actually COVERS -- an insurer's coverage_type is more
+      // reliable than our own category guess.
+      const coversCi = policies.some((p) => {
+        const covers = String(p.coverage_type ?? "").toLowerCase();
+        return String(p.policy_type) === "ci_standalone" ||
+          covers.includes("ci") || covers.includes("critical");
+      });
+      if (!coversCi) {
+        gaps.push("No critical illness cover on file, on any plan or rider.");
       }
-      if (!types.has("disability")) {
+      const coversDisability = policies.some((p) =>
+        String(p.policy_type) === "disability" ||
+        String(p.coverage_type ?? "").toLowerCase().includes("disability income"));
+      if (!coversDisability) {
         gaps.push("No disability income cover on file.");
       }
       if (!types.has("term_life") && !types.has("whole_life")) {
